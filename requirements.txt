@@ -1,0 +1,43 @@
+# Core Framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# Database
+sqlalchemy==2.0.36
+asyncpg==0.30.0
+alembic==1.14.1
+greenlet>=3.0.0
+
+# Validation & Settings
+pydantic==2.10.4
+pydantic-settings==2.7.1
+python-dotenv==1.0.1
+
+# Auth
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.20
+google-auth>=2.29.0
+requests>=2.31.0
+
+# Utilities
+email-validator==2.2.0
+httpx==0.28.1
+python-dateutil>=2.9.0
+
+# AI / LLM (Gemini uses SDK; Groq uses httpx OpenAI-compatible endpoint)
+google-generativeai>=0.8.0
+
+# Document Parsing & Vision (Module 6)
+pdfplumber>=0.11.0
+Pillow>=10.0.0
+
+# MFA (Module 10)
+pyotp>=2.9.0
+qrcode[pil]>=7.4
+
+# Report Generation (Module 10)
+reportlab>=4.0
+
+# Security / Rate Limiting (Module 15)
+slowapi>=0.1.10

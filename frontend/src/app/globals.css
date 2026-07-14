@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --color-aws-grey: #F2F3F3;
+  --color-aws-white: #FFFFFF;
+  --color-aws-orange: #FF9900;
+  --color-aws-orange-hover: #EC7211;
+  --color-aws-charcoal: #232F3E;
+  --color-aws-charcoal-light: #37474F;
+  --color-aws-dark-blue: #1A2530;
+  
+  --background: #F2F3F3;
+  --foreground: #232F3E;
+}
+
+body {
+  background-color: var(--color-aws-grey);
+  color: var(--color-aws-charcoal);
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
