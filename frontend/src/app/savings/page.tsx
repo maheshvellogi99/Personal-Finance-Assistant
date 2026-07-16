@@ -46,6 +46,7 @@ interface SavingsGoal {
   id: string;
   goal_name: string;
   target_amount: number;
+  current_amount: number;
   target_date: string;
   monthly_contribution?: number;
   ai_monthly_suggestion?: number;
@@ -72,7 +73,7 @@ export default function SavingsPage() {
   const [savedGoals, setSavedGoals] = useState<SavingsGoal[]>([]);
   const [loadingGoals, setLoadingGoals] = useState(false);
 
-  // Glassmorphic Modal State
+  // Glassmorphic Modal State (Create / Edit)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
@@ -81,6 +82,18 @@ export default function SavingsPage() {
   const [modalMonthlyContribution, setModalMonthlyContribution] = useState<number>(0);
   const [modalTargetDate, setModalTargetDate] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Glassmorphic Funding Modal State
+  const [isFundModalOpen, setIsFundModalOpen] = useState(false);
+  const [activeFundGoalId, setActiveFundGoalId] = useState<string | null>(null);
+  const [activeFundGoalName, setActiveFundGoalName] = useState('');
+  const [fundAmount, setFundAmount] = useState('');
+  const [isFunding, setIsFunding] = useState(false);
+
+  // Glassmorphic Delete Confirmation Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -221,27 +234,69 @@ export default function SavingsPage() {
     }
   };
 
-  const handleDeleteGoal = async (goalId: string) => {
-    if (!window.confirm('Are you sure you want to delete this savings goal?')) {
-      return;
-    }
-
+  const confirmDelete = async () => {
+    if (!goalToDelete) return;
+    setIsDeleting(true);
     setErrorMsg(null);
     setSuccessMsg(null);
 
     try {
-      const res = await apiFetch(`/savings/${goalId}`, {
+      const res = await apiFetch(`/savings/${goalToDelete}`, {
         method: 'DELETE',
       });
 
       if (res.ok) {
         setSuccessMsg('Successfully deleted savings goal.');
+        setIsDeleteModalOpen(false);
+        setGoalToDelete(null);
         fetchSavedGoals();
       } else {
         setErrorMsg('Failed to delete savings goal.');
       }
     } catch (err) {
       setErrorMsg('Network error. Failed to delete savings goal.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Fund management triggers
+  const openFundGoalModal = (goal: SavingsGoal) => {
+    setActiveFundGoalId(goal.id);
+    setActiveFundGoalName(goal.goal_name);
+    setFundAmount('');
+    setIsFundModalOpen(true);
+  };
+
+  const handleFundGoal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeFundGoalId || !fundAmount || parseFloat(fundAmount) <= 0) {
+      setErrorMsg('Please enter a valid deposit amount greater than zero.');
+      return;
+    }
+
+    setIsFunding(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      const res = await apiFetch(`/savings/${activeFundGoalId}/fund`, {
+        method: 'POST',
+        body: JSON.stringify({ amount: Number(fundAmount) }),
+      });
+
+      if (res.ok) {
+        setSuccessMsg(`Funds securely deposited to "${activeFundGoalName}"!`);
+        setIsFundModalOpen(false);
+        fetchSavedGoals();
+      } else {
+        const err = await res.json();
+        setErrorMsg(err.detail || 'Failed to complete savings deposit.');
+      }
+    } catch (err) {
+      setErrorMsg('Network error. Failed to execute deposit transaction.');
+    } finally {
+      setIsFunding(false);
     }
   };
 
@@ -271,16 +326,26 @@ export default function SavingsPage() {
 
         {/* Notifications and Alerts */}
         {errorMsg && (
-          <div className="bg-rose-500/10 border-l-4 border-rose-500 p-3.5 rounded mb-6 animate-fade-in text-white">
-            <p className="text-xs font-bold text-rose-400 uppercase tracking-wider">Simulation Warning</p>
-            <p className="text-xs text-rose-350 mt-0.5">{errorMsg}</p>
+          <div className="bg-rose-500/10 border-l-4 border-rose-500 p-3.5 rounded mb-6 animate-fade-in text-white flex items-start">
+            <svg className="w-5 h-5 text-rose-400 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-xs font-bold text-rose-400 uppercase tracking-wider">Simulation Warning</p>
+              <p className="text-xs text-rose-250 mt-0.5">{errorMsg}</p>
+            </div>
           </div>
         )}
 
         {successMsg && (
-          <div className="bg-emerald-500/10 border-l-4 border-emerald-500 p-3.5 rounded mb-6 animate-fade-in text-white">
-            <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Success Log</p>
-            <p className="text-xs text-emerald-350 mt-0.5">{successMsg}</p>
+          <div className="bg-emerald-500/10 border-l-4 border-emerald-500 p-3.5 rounded mb-6 animate-fade-in text-white flex items-start">
+            <svg className="w-5 h-5 text-emerald-400 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Success Log</p>
+              <p className="text-xs text-emerald-250 mt-0.5">{successMsg}</p>
+            </div>
           </div>
         )}
 
@@ -291,7 +356,9 @@ export default function SavingsPage() {
 
           {projectionData && projectionData.is_unreachable ? (
             <div className="relative z-10 bg-red-500/10 border border-red-500/30 text-red-200 p-4 rounded-xl flex items-center justify-center space-x-2">
-              <span className="text-base">⚠️</span>
+              <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
               <span className="text-xs md:text-sm font-medium">
                 This financial target is out of bounds for your current baseline rate. Try adjusting your baseline contribution upward or lowering your target goal.
               </span>
@@ -417,7 +484,10 @@ export default function SavingsPage() {
                 disabled={loading || !projectionData || projectionData.is_unreachable}
                 className="w-full py-2.5 px-4 rounded font-bold text-xs bg-gradient-to-r from-[#FF9900] to-[#FFB84D] text-black hover:from-[#EC7211] hover:to-[#FF9900] shadow-md transition-all active:scale-98 flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50"
               >
-                <span>💾 Save Goal to Dashboard</span>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                <span>Save Goal to Dashboard</span>
               </button>
             </div>
           </div>
@@ -534,53 +604,84 @@ export default function SavingsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {savedGoals.map((goal) => (
-                <div
-                  key={goal.id}
-                  className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 relative overflow-hidden group hover:border-white/15 transition-all"
-                >
-                  {/* Action triggers top right */}
-                  <div className="absolute top-4 right-4 flex space-x-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => openEditGoalModal(goal)}
-                      className="text-gray-400 hover:text-white p-1 rounded hover:bg-white/10 transition-colors text-xs"
-                      title="Edit Goal"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleDeleteGoal(goal.id)}
-                      className="text-rose-400 hover:text-rose-300 p-1 rounded hover:bg-rose-500/10 transition-colors text-xs"
-                      title="Delete Goal"
-                    >
-                      🗑️
-                    </button>
-                  </div>
+              {savedGoals.map((goal) => {
+                const fundingPct = Math.min(100, Math.max(0, (goal.current_amount / goal.target_amount) * 100));
 
-                  <h3 className="font-bold text-base text-white tracking-tight mb-4 mr-12 truncate">
-                    {goal.goal_name}
-                  </h3>
+                return (
+                  <div
+                    key={goal.id}
+                    className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 relative overflow-hidden group hover:border-white/15 transition-all flex flex-col justify-between min-h-[220px]"
+                  >
+                    <div>
+                      {/* Action triggers top right */}
+                      <div className="absolute top-4 right-4 flex space-x-2.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => openEditGoalModal(goal)}
+                          className="text-gray-400 hover:text-[#FF9900] transition-colors duration-200 cursor-pointer"
+                          title="Edit Goal"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setGoalToDelete(goal.id);
+                            setIsDeleteModalOpen(true);
+                          }}
+                          className="text-gray-400 hover:text-rose-500 transition-colors duration-200 cursor-pointer"
+                          title="Delete Goal"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
 
-                  <div className="space-y-2.5 text-xs">
-                    <div className="flex justify-between items-center border-b border-white/5 pb-1.5">
-                      <span className="text-gray-400">Target Amount</span>
-                      <span className="font-bold text-white">{formatCurrency(goal.target_amount)}</span>
+                      <h3 className="font-bold text-base text-white tracking-tight mb-3 mr-12 truncate">
+                        {goal.goal_name}
+                      </h3>
+
+                      {/* Goal funding progress bar */}
+                      <div className="mb-4">
+                        <div className="w-full bg-white/10 rounded-full h-1.5 mt-2 mb-1.5">
+                          <div className="bg-[#FF9900] h-1.5 rounded-full transition-all duration-500" style={{ width: `${fundingPct}%` }} />
+                        </div>
+                        <div className="flex justify-between items-center text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+                          <span>{fundingPct.toFixed(1)}% Funded</span>
+                          <span>{formatCurrency(goal.current_amount)} / {formatCurrency(goal.target_amount)}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 text-xs border-t border-white/5 pt-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400">Monthly Contribution</span>
+                          <span className="font-medium text-white">
+                            {formatCurrency(goal.monthly_contribution ?? goal.ai_monthly_suggestion ?? 0)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400">Est. Target Date</span>
+                          <span className="font-mono text-gray-300">
+                            {goal.target_date ? new Date(goal.target_date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short' }) : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center border-b border-white/5 pb-1.5">
-                      <span className="text-gray-400">Monthly Deposit</span>
-                      <span className="font-medium text-white">
-                        {formatCurrency(goal.monthly_contribution ?? goal.ai_monthly_suggestion ?? 0)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center pt-0.5">
-                      <span className="text-gray-400">Est. Target Date</span>
-                      <span className="font-mono text-gray-300">
-                        {goal.target_date ? new Date(goal.target_date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short' }) : 'N/A'}
-                      </span>
+
+                    {/* Add Funds Button */}
+                    <div className="mt-4 pt-3 border-t border-white/5 flex justify-end">
+                      <button
+                        onClick={() => openFundGoalModal(goal)}
+                        className="text-xs font-bold text-[#FF9900] hover:text-[#EC7211] transition-colors flex items-center space-x-1 cursor-pointer"
+                      >
+                        <span className="text-sm">+</span>
+                        <span>Add Funds</span>
+                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -684,6 +785,135 @@ export default function SavingsPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* ── Reusable Glassmorphic Funding Modal ───────────────────────── */}
+        {isFundModalOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-black/85 backdrop-blur-2xl border border-white/10 rounded-2xl text-white shadow-2xl max-w-sm w-full overflow-hidden animate-zoom-in">
+              {/* Modal Header */}
+              <div className="bg-white/[0.02] border-b border-white/10 px-6 py-4 flex items-center justify-between">
+                <h3 className="font-bold text-base flex items-center space-x-2">
+                  <svg className="w-5 h-5 text-[#FF9900]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Deposit to Milestone</span>
+                </h3>
+                <button 
+                  onClick={() => setIsFundModalOpen(false)}
+                  className="text-gray-400 hover:text-white transition-colors focus:outline-none"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Modal Body Form */}
+              <form onSubmit={handleFundGoal} className="p-6 space-y-4">
+                <div>
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Target Goal</span>
+                  <span className="text-sm font-semibold text-white mt-1 block">{activeFundGoalName}</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Deposit Amount (INR)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-gray-400 font-semibold text-sm">₹</span>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      placeholder="0"
+                      value={fundAmount}
+                      onChange={(e) => setFundAmount(e.target.value)}
+                      className="w-full border border-white/10 bg-white/5 text-white rounded px-3 py-2 pl-7 text-sm focus:outline-none focus:border-[#FF9900] font-medium font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center justify-end space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsFundModalOpen(false)}
+                    className="px-4 py-2 text-xs font-semibold rounded border border-white/10 hover:bg-white/[0.04] text-gray-300 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isFunding}
+                    className="px-4 py-2 text-xs font-bold rounded bg-gradient-to-r from-[#FF9900] to-[#FFB84D] text-black hover:from-[#EC7211] hover:to-[#FF9900] shadow-sm transition-all cursor-pointer flex items-center justify-center space-x-1.5"
+                  >
+                    {isFunding ? (
+                      <>
+                        <svg className="animate-spin h-3.5 w-3.5 text-black" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        <span>Depositing...</span>
+                      </>
+                    ) : (
+                      <span>Deposit Funds</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ── Reusable Glassmorphic Delete Confirmation Modal ────────────── */}
+        {isDeleteModalOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-[#111] border border-white/10 rounded-2xl p-6 max-w-sm w-full text-center text-white shadow-2xl animate-zoom-in">
+              {/* Warning Icon SVG */}
+              <div className="w-12 h-12 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+
+              <h3 className="text-lg font-bold tracking-tight text-white mb-2">Delete Savings Goal?</h3>
+              <p className="text-xs text-gray-400 mb-6 leading-relaxed">
+                This action cannot be undone. Your active funds will remain in your central ledger, but this milestone tracker will be permanently deleted.
+              </p>
+
+              {/* Side by side action buttons */}
+              <div className="flex items-center justify-center space-x-3">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => {
+                    setIsDeleteModalOpen(false);
+                    setGoalToDelete(null);
+                  }}
+                  className="flex-1 py-2 px-4 rounded text-xs font-semibold border border-white/10 hover:bg-white/[0.04] text-gray-300 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={confirmDelete}
+                  className="flex-1 py-2 px-4 rounded text-xs font-bold bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors cursor-pointer flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <>
+                      <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <span>Delete Goal</span>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -57,6 +57,7 @@ from app.schemas.schemas import (
     MFASetupResponse,
     MFAVerifyRequest,
     MFAVerifyResponse,
+    PasswordChangeRequest,
     TokenResponse,
     UserCreate,
     UserLogin,
@@ -647,3 +648,30 @@ async def mfa_disable(
         message="MFA has been disabled on your account.",
         mfa_enabled=False,
     )
+
+
+# ── POST /auth/change-password ───────────────────────────────────────────
+@router.post(
+    "/change-password",
+    summary="Change the current user's password",
+)
+async def change_password(
+    body: PasswordChangeRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Securely update the authenticated user's password.
+
+    Requires the old password for verification before accepting the new one.
+    """
+    if not verify_password(body.old_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect old password",
+        )
+
+    current_user.hashed_password = hash_password(body.new_password)
+    await db.commit()
+
+    return {"message": "Password updated successfully"}

@@ -85,6 +85,11 @@ class TokenResponse(BaseModel):
     mfa_enabled: bool = False
 
 
+class PasswordChangeRequest(BaseModel):
+    old_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8, description="New password (min 8 characters)")
+
+
 # ── MFA Schemas ──────────────────────────────────────────────────────────
 class MFASetupResponse(BaseModel):
     """Returned when a user initiates MFA setup."""
@@ -370,6 +375,10 @@ class SavingsGoalResponse(BaseModel):
     ai_monthly_suggestion: float | None
     created_at: datetime
     updated_at: datetime
+
+
+class GoalFundRequest(BaseModel):
+    amount: float = Field(..., gt=0, description="Amount to deposit into the savings goal")
 
 
 # ═══════════════════════════════════════════════════════════════════════════

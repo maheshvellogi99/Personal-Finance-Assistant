@@ -124,9 +124,10 @@ interface BudgetProgressCardProps {
   /** If provided, uses this data instead of fetching from the API. */
   data?: BudgetStatusData;
   onEditBudget?: (budget: BudgetItem) => void;
+  onAlertsSync?: (alerts: string[]) => void;
 }
 
-export default function BudgetProgressCard({ data: externalData, onEditBudget }: BudgetProgressCardProps) {
+export default function BudgetProgressCard({ data: externalData, onEditBudget, onAlertsSync }: BudgetProgressCardProps) {
   const [budgetData, setBudgetData] = useState<BudgetStatusData | null>(externalData ?? null);
   const [loading, setLoading] = useState(!externalData);
   const [error, setError] = useState<string | null>(null);
@@ -171,6 +172,19 @@ export default function BudgetProgressCard({ data: externalData, onEditBudget }:
       fetchBudgetStatus();
     }
   }, [externalData]);
+
+  // Extract alerts for event sync early, safely handling budgetData structure
+  const currentAlerts = budgetData?.alerts;
+
+  useEffect(() => {
+    if (currentAlerts) {
+      if (onAlertsSync) {
+        onAlertsSync(currentAlerts);
+      } else {
+        window.dispatchEvent(new CustomEvent('sync-budget-alerts', { detail: currentAlerts }));
+      }
+    }
+  }, [currentAlerts, onAlertsSync]);
 
   // Format currency helper
   const formatCurrency = (val: number) => {
@@ -220,7 +234,7 @@ export default function BudgetProgressCard({ data: externalData, onEditBudget }:
     );
   }
 
-  const { budgets = [], alerts = [], overall_percentage = 0, total_budget = 0, total_spent = 0, total_remaining = 0, month } = budgetData;
+  const { budgets = [], alerts = [], overall_percentage = 0, total_budget = 0, total_spent = 0, total_remaining = 0, month } = budgetData || {};
 
   // Count statuses
   const exceededCount = budgets.filter((b) => b.status === 'exceeded').length;

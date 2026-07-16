@@ -17,6 +17,7 @@ export default function UploadDropdown({ onUploadSuccess, onManualEntryClick }: 
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [pdfPassword, setPdfPassword] = useState('');
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -117,7 +118,7 @@ export default function UploadDropdown({ onUploadSuccess, onManualEntryClick }: 
       } else {
         const err = await res.json();
         if (err.detail === 'PDF_PASSWORD_REQUIRED') {
-          alert('Incorrect PDF password. Please try again.');
+          setIsErrorModalOpen(true);
           setPdfPassword('');
           // Keep modal open for retry — do NOT close it
         } else {
@@ -287,6 +288,36 @@ export default function UploadDropdown({ onUploadSuccess, onManualEntryClick }: 
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Incorrect PDF Password Error Modal */}
+      {isErrorModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#111] border border-white/10 rounded-2xl p-6 max-w-sm w-full text-center text-white shadow-2xl animate-zoom-in">
+            {/* Warning Icon SVG */}
+            <div className="w-12 h-12 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+
+            <h3 className="text-lg font-bold tracking-tight text-white mb-2">Incorrect PDF Password</h3>
+            <p className="text-xs text-gray-400 mb-6 leading-relaxed">
+              Incorrect PDF password. Please try again.
+            </p>
+
+            {/* Close CTA Button */}
+            <div className="flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => setIsErrorModalOpen(false)}
+                className="w-full py-2.5 px-4 rounded text-xs font-bold bg-gradient-to-r from-[#FF9900] to-[#FFB84D] text-black hover:from-[#EC7211] hover:to-[#FF9900] shadow-sm transition-all cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

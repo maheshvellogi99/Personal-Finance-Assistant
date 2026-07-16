@@ -3,17 +3,18 @@ Savings routes.
 
 Endpoints
 ─────────
-POST   /savings/            Create a new savings goal.
-GET    /savings/            List all savings goals for the user.
-PATCH  /savings/{goal_id}   Update a savings goal.
-DELETE /savings/{goal_id}   Delete a savings goal.
-POST   /savings/what-if     Run a "What-If" savings projection.
+POST   /savings/                  Create a new savings goal.
+GET    /savings/                  List all savings goals for the user.
+PATCH  /savings/{goal_id}         Update a savings goal.
+DELETE /savings/{goal_id}         Delete a savings goal.
+POST   /savings/{goal_id}/fund    Fund a savings goal (with ledger sync).
+POST   /savings/what-if           Run a "What-If" savings projection.
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 
 from dateutil.relativedelta import relativedelta
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -21,9 +22,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models.models import SavingsGoal, User
+from app.models.models import (
+    SavingsGoal,
+    Transaction,
+    TransactionCategory,
+    TransactionType,
+    User,
+)
 from app.routes.auth import get_current_user
 from app.schemas.schemas import (
+    GoalFundRequest,
     ProjectionPoint,
     SavingsGoalCreate,
     SavingsGoalResponse,
@@ -181,6 +189,54 @@ async def delete_savings_goal(
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+#  POST /savings/{goal_id}/fund — Fund a Savings Goal
+# ═══════════════════════════════════════════════════════════════════════════
+@router.post(
+    "/{goal_id}/fund",
+    response_model=SavingsGoalResponse,
+    summary="Fund a savings goal and log ledger transaction",
+)
+async def fund_savings_goal(
+    goal_id: uuid.UUID,
+    body: GoalFundRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Inject money into a savings goal.
+
+    This performs a dual-write in a single DB transaction:
+
+    1. **Balance mutation** — Increments the goal's ``current_amount``.
+    2. **Ledger synchronisation** — Creates a ``Transaction`` record of type
+       ``TRANSFER`` / category ``TRANSFER`` so the funding appears in the
+       user's transaction history and budget tracking.
+    """
+    # Step A: Validate ownership
+    goal = await _get_user_goal(db, goal_id, current_user.id)
+
+    # Step B: Increment balance
+    goal.current_amount = float(goal.current_amount) + body.amount
+
+    # Step C: Create ledger entry
+    txn = Transaction(
+        user_id=current_user.id,
+        transaction_type=TransactionType.TRANSFER,
+        category=TransactionCategory.SAVINGS,
+        amount=body.amount,
+        currency=goal.currency,
+        description=f"Fund Allocation: {goal.goal_name}",
+        merchant_name="Internal Savings Transfer",
+        transaction_date=datetime.now(timezone.utc).date(),
+    )
+    db.add(txn)
+
+    # Step D: Commit & return
+    await db.commit()
+    await db.refresh(goal)
+    return goal
+
+
 #  POST /savings/what-if — Savings "What-If" Projection Engine
 # ═══════════════════════════════════════════════════════════════════════════
 @router.post(

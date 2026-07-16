@@ -186,7 +186,7 @@ export default function ChatInterface({
     <div
       id="chat-interface"
       className="bg-black/40 backdrop-blur-2xl border border-white/10 flex flex-col hover:border-white/20 transition-all overflow-hidden rounded-2xl"
-      style={{ height: '100%', minHeight: '420px', maxHeight: '550px' }}
+      style={{ height: '100%', minHeight: '420px', maxHeight: '800px' }}
     >
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-transparent flex-shrink-0">
@@ -222,17 +222,15 @@ export default function ChatInterface({
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[85%] rounded-lg px-4 py-3 ${
-                msg.role === 'user'
-                  ? 'bg-white/[0.08] text-white rounded-br-sm border border-white/10'
-                  : 'bg-white/[0.02] text-white border border-white/[0.06] rounded-bl-sm shadow-sm'
-              }`}
+              className={`max-w-[85%] rounded-lg px-4 py-3 ${msg.role === 'user'
+                ? 'bg-white/[0.08] text-white rounded-br-sm border border-white/10'
+                : 'bg-white/[0.02] text-white border border-white/[0.06] rounded-bl-sm shadow-sm'
+                }`}
             >
               {/* Role Label */}
               <div
-                className={`text-[10px] font-bold uppercase tracking-wider mb-1.5 ${
-                  msg.role === 'user' ? 'text-gray-400' : 'text-[#FF9900]'
-                }`}
+                className={`text-[10px] font-bold uppercase tracking-wider mb-1.5 ${msg.role === 'user' ? 'text-gray-400' : 'text-[#FF9900]'
+                  }`}
               >
                 {msg.role === 'user' ? 'You' : 'AI Analyst'}
               </div>
@@ -244,9 +242,8 @@ export default function ChatInterface({
 
               {/* Timestamp */}
               <div
-                className={`text-[9px] mt-2 ${
-                  msg.role === 'user' ? 'text-gray-500' : 'text-gray-400'
-                } text-right`}
+                className={`text-[9px] mt-2 ${msg.role === 'user' ? 'text-gray-500' : 'text-gray-400'
+                  } text-right`}
               >
                 {formatTime(msg.timestamp)}
               </div>

@@ -35,6 +35,11 @@ export default function BudgetsPage() {
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isApplyingRec, setIsApplyingRec] = useState<string | null>(null);
+  const [currentAlerts, setCurrentAlerts] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    window.dispatchEvent(new CustomEvent('sync-budget-alerts', { detail: currentAlerts }));
+  }, [currentAlerts]);
 
   // Form State
   const [category, setCategory] = useState('food');
@@ -439,7 +444,7 @@ export default function BudgetsPage() {
               </div>
             )}
 
-            <BudgetProgressCard key={refreshKey} onEditBudget={handleEditBudget} />
+            <BudgetProgressCard key={refreshKey} onEditBudget={handleEditBudget} onAlertsSync={setCurrentAlerts} />
           </div>
         </div>
       </DashboardLayout>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -25,6 +25,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  
+  // Event-Driven alerts single source of truth
+  const [navAlerts, setNavAlerts] = useState<string[]>([]);
+  const [isCleared, setIsCleared] = useState(false);
+
+  useEffect(() => {
+    const handleSync = (e: any) => {
+      if (!isCleared) {
+        setNavAlerts(e.detail || []);
+      }
+    };
+    window.addEventListener('sync-budget-alerts', handleSync);
+    return () => window.removeEventListener('sync-budget-alerts', handleSync);
+  }, [isCleared]);
+
+  const handleClearNotifications = () => {
+    setNavAlerts([]);
+    setIsCleared(true);
+  };
 
   const getInitials = (name?: string) => {
     if (!name) return 'US';
@@ -74,7 +93,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     },
     {
       name: 'AI Chat',
-      href: '#chat',
+      href: '/ai-chat',
       badge: 'New',
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -145,27 +164,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-[#FF9900] rounded-full ring-2 ring-black"></span>
+              {navAlerts.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-[#FF9900] text-black font-extrabold text-[9px] w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-black animate-pulse">
+                  {navAlerts.length}
+                </span>
+              )}
             </button>
 
             {/* Notifications Menu dropdown */}
             {isNotificationsOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-[#121212] border border-white/10 rounded-md shadow-lg py-1 text-white ring-1 ring-black/5 z-50">
+              <div className="absolute right-0 mt-2 w-80 bg-[#121212] border border-white/10 rounded-md shadow-lg py-1 text-white ring-1 ring-black/5 z-50 animate-fade-in">
                 <div className="px-4 py-2 border-b border-white/10 font-semibold text-sm flex justify-between items-center">
                   <span>Notifications</span>
-                  <span className="text-xs text-[#FF9900] cursor-pointer hover:underline">Mark all read</span>
+                  <span className="text-xs text-[#FF9900] cursor-pointer hover:underline" onClick={handleClearNotifications}>Clear</span>
                 </div>
-                <div className="max-h-60 overflow-y-auto">
-                  <div className="px-4 py-3 hover:bg-white/[0.04] border-b border-white/10 cursor-pointer">
-                    <p className="text-xs font-semibold">Budget Warning</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Dining out category has reached 85% of budget.</p>
-                    <span className="text-[10px] text-gray-500 mt-1 block">5 minutes ago</span>
-                  </div>
-                  <div className="px-4 py-3 hover:bg-white/[0.04] border-b border-white/10 cursor-pointer">
-                    <p className="text-xs font-semibold">AI Insight Generated</p>
-                    <p className="text-xs text-gray-400 mt-0.5">AI analyzed your weekend spending and created a report.</p>
-                    <span className="text-[10px] text-gray-500 mt-1 block">2 hours ago</span>
-                  </div>
+                <div className="max-h-60 overflow-y-auto px-4 py-3">
+                  {navAlerts.length > 0 ? (
+                    navAlerts.map((alertText: string, idx: number) => {
+                      const isCritical = alertText.toLowerCase().includes('critical') || alertText.toLowerCase().includes('exceeded') || alertText.toLowerCase().includes('🚨');
+                      return (
+                        <div key={idx} className={`text-xs mb-2 pb-2 border-b border-white/10 last:border-0 ${isCritical ? 'text-rose-500' : 'text-[#FF9900]'}`}>
+                          {alertText}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="px-2 py-4 text-center text-xs text-gray-500 font-medium">
+                      No new alerts. You are on track!
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -196,9 +223,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <p className="text-xs text-gray-400">Signed in as</p>
                   <p className="text-sm font-semibold truncate">{user?.email || 'unknown@geonixa.com'}</p>
                 </div>
-                <Link href="#" className="block px-4 py-2 text-sm hover:bg-white/[0.04] transition-colors">Your Profile</Link>
-                <Link href="/settings" className="block px-4 py-2 text-sm hover:bg-white/[0.04] transition-colors">Account Settings</Link>
-                <Link href="#" className="block px-4 py-2 text-sm hover:bg-white/[0.04] transition-colors">AWS Billing Settings</Link>
+                <Link href="/profile" className="block px-4 py-2 text-sm hover:bg-white/[0.04] transition-colors">Your Profile</Link>
+                <Link href="/profile" className="block px-4 py-2 text-sm hover:bg-white/[0.04] transition-colors">Account Settings</Link>
                 <div className="border-t border-white/10 my-1"></div>
                 <button
                   onClick={logout}
