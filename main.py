@@ -36,6 +36,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
+    debug=settings.DEBUG,
     description=(
         "AI-Powered Virtual Personal Finance Assistant API.\n\n"
         "Manage bank accounts, transactions, budgets, and savings goals "
@@ -43,8 +44,9 @@ app = FastAPI(
         "MFA security, and GDPR-compliant data handling."
     ),
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
+    # Disable Swagger UI in production for security
+    docs_url=None if settings.is_production else "/docs",
+    redoc_url=None if settings.is_production else "/redoc",
 )
 
 # ── Rate Limiting (DAST Security) ────────────────────────────────────────

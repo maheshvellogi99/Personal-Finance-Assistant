@@ -134,9 +134,9 @@ class User(TimestampMixin, Base):
     is_verified: Mapped[bool] = mapped_column(Boolean, server_default="false")
     role: Mapped[UserRole] = mapped_column(
         Enum(UserRole, name="user_role_enum"),
-        server_default="user",
+        server_default="USER",
         nullable=False,
-        comment="RBAC role: 'user' (default) or 'admin'.",
+        comment="RBAC role: 'USER' (default) or 'ADMIN'.",
     )
 
     # ── GDPR Compliance Fields ───────────────────────────────────────────

@@ -21,8 +21,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "Virtual Personal Finance Assistant"
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
+    ENVIRONMENT: str = "development"   # development | staging | production
 
-    # ── Database ─────────────────────────────────────────────────────────
+    # ── Database (PostgreSQL + asyncpg) ──────────────────────────────────
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/finance_db"
 
     # ── Auth / JWT ───────────────────────────────────────────────────────
@@ -42,6 +43,10 @@ class Settings(BaseSettings):
 
     # ── Google OAuth ────────────────────────────────────────────────────
     GOOGLE_CLIENT_ID: str = ""  # Google Cloud Console: https://console.cloud.google.com/apis/credentials
+
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT == "production"
 
 
 settings = Settings()
