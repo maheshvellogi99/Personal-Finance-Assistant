@@ -9,7 +9,9 @@ import UploadDropdown from '@/components/UploadDropdown';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { apiFetch } from '@/utils/api';
 import { Playfair_Display, Inter } from 'next/font/google';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import dynamic from 'next/dynamic';
+
+const CashflowChart = dynamic(() => import('@/components/CashflowChart'), { ssr: false });
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -544,7 +546,7 @@ export default function Dashboard() {
                 </select>
               </div>
 
-              <div className="flex-1 w-full h-64 bg-transparent rounded flex flex-col items-center justify-center p-4 relative overflow-hidden min-h-[260px]">
+              <div className="w-full min-h-[300px] bg-transparent rounded flex flex-col items-center justify-center p-4 relative overflow-hidden">
                 {loading || !mounted ? (
                   <div className="flex flex-col items-center justify-center text-gray-400 text-xs animate-pulse">
                     <span>Synchronizing ledger records...</span>
@@ -560,34 +562,7 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   /* Recharts Bar Chart */
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
-                      <XAxis 
-                        dataKey="date" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fill: '#888888', fontSize: 10 }}
-                      />
-                      <YAxis 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fill: '#888888', fontSize: 10 }}
-                        tickFormatter={(val) => `₹${val}`}
-                      />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: '#121212', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px' }}
-                        itemStyle={{ color: '#fff' }}
-                        labelStyle={{ color: '#888', fontWeight: 'bold' }}
-                        formatter={(value: any) => [formatCurrency(value), 'Expenses']}
-                      />
-                      <Bar 
-                        dataKey="amount" 
-                        fill="#FF9900" 
-                        radius={[4, 4, 0, 0]} 
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <CashflowChart chartData={chartData} formatCurrency={formatCurrency} />
                 )}
               </div>
             </div>
