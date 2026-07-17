@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AWS AI Personal Finance Assistant",
+  title: "Finora - AI Personal Finance Assistant",
   description: "Secure, AI-powered personal financial dashboard with statement scans and budget limits.",
 };
 
