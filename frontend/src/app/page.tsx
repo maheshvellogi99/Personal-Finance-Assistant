@@ -546,7 +546,7 @@ export default function Dashboard() {
                 </select>
               </div>
 
-              <div className="w-full min-h-[300px] bg-transparent rounded flex flex-col items-center justify-center p-4 relative overflow-hidden">
+              <div className="w-full h-[300px] min-h-[300px] bg-transparent rounded flex flex-col items-center justify-center p-4 relative overflow-hidden">
                 {loading || !mounted ? (
                   <div className="flex flex-col items-center justify-center text-gray-400 text-xs animate-pulse">
                     <span>Synchronizing ledger records...</span>
